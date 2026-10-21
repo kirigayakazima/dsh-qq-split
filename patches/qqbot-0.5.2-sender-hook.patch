@@ -1,0 +1,11 @@
+--- a/dist/gateway/bootstrap.js
++++ b/dist/gateway/bootstrap.js
+@@ -78,6 +78,7 @@
+             msgId: target.msgId,
+         },
+     }),
+ };
++ctx.provide('qqbotSender', sender);
+ const outboundHandler = createOutboundHandler(manager, sender, config, logger, toolsRegistry);
+ ctx
+     .on('session/event', outboundHandler);

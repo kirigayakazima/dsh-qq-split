@@ -1,0 +1,36 @@
+{
+  "name": "@dsh/qq-split",
+  "version": "0.1.0",
+  "description": "QQ 机器人出站消息断句适配器：在发送前将长文本回复切分为 2–3 条短消息逐条发送，模拟真人打字节奏。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./split": {
+      "default": "./lib/split.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "patches",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "qqbot",
+    "split",
+    "im"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.0",
+    "@deepseek-ai/schemastery": ">=3.18.0"
+  }
+}
