@@ -16,25 +16,34 @@ DSH（DeepSeek Harness）的 QQ 机器人消息断句出口适配器。
 
 ---
 
-## 前置依赖：给 qqbot 打 1 行钩子补丁
+## 前置依赖：给 qqbot 暴露 sender 钩子（1行代码）
 
-由于 `@tencent-connect/dsh-qqbot` 默认未将 `sender` 暴露给兄弟插件，需要在该包中暴露 `qqbotSender`。
+由于 `@tencent-connect/dsh-qqbot` 默认未将 `sender` 暴露给兄弟插件，需要暴露 `qqbotSender` 供断句插件注入。
 
-### 补丁位置
-`/root/.dsh/plugin-src/@tencent-connect/dsh-qqbot/dist/gateway/bootstrap.js`
-
-在 `const sender = { ... };` 后面加上一行：
-```js
-ctx.provide('qqbotSender', sender);
-```
-
-或者在 qqbot 目录下直接执行 git patch：
+### 自动打入补丁（单行 Node 脚本，最安全防转义）
+在手机终端直接执行下面命令：
 ```sh
-cd /root/.dsh/plugin-src/@tencent-connect/dsh-qqbot
-patch -p1 < /path/to/dsh-qq-split/patches/qqbot-0.5.2-sender-hook.patch
+node -e '
+const fs = require("fs");
+const file = "/root/.dsh/plugin-src/@tencent-connect/dsh-qqbot/dist/gateway/bootstrap.js";
+let s = fs.readFileSync(file, "utf8");
+if (!s.includes("qqbotSender")) {
+  s = s.replace(/(const sender = \{[\s\S]*?\n    \};)/, "$1\n    ctx.provide(\x27qqbotSender\x27, sender);");
+  fs.writeFileSync(file, s, "utf8");
+  console.log("Hook patched successfully!");
+} else {
+  console.log("Already patched.");
+}
+'
 ```
 
-> **注意**：如果未来升级了 `@tencent-connect/dsh-qqbot`，重打此 1 行补丁即可。未打补丁时，断句插件会因为找不到 `qqbotSender` 依赖而安全静默不加载。
+### 验证补丁是否成功打入
+```sh
+grep "qqbotSender" /root/.dsh/plugin-src/@tencent-connect/dsh-qqbot/dist/gateway/bootstrap.js
+```
+若输出包含 `ctx.provide('qqbotSender', sender);` 则说明补丁已就绪！
+
+> **注意**：如果未来升级了 `@tencent-connect/dsh-qqbot`，重跑此脚本即可。未打补丁时，断句插件会因为找不到 `qqbotSender` 依赖而安全静默不加载。
 
 ---
 
@@ -42,7 +51,7 @@ patch -p1 < /path/to/dsh-qq-split/patches/qqbot-0.5.2-sender-hook.patch
 
 ### 1. 关掉 QQBot 流式（必须）
 流式（`streaming: true`）直接走内部 `StreamingWriter`，不流经 `sendMarkdown` 出口。
-需在 profile 的 `cordis.patch.yml` 中关闭：
+需在 profile 的 `/root/.dsh/profiles/web/cordis.patch.yml` 中关闭：
 
 ```yaml
 - id: im-qqbot
@@ -50,39 +59,57 @@ patch -p1 < /path/to/dsh-qq-split/patches/qqbot-0.5.2-sender-hook.patch
     streaming: false
 ```
 
-### 2. 注册并配置插件
-在 `cordis.patch.yml` 中添加配置，并将 `@dsh/qq-split` 加进 profile 的 `dsh.profile.bundles`：
+### 2. 注册插件（与 `@dsh/heart` 同理）
+在 `/root/.dsh/profiles/web/package.json` 中的 `dsh.profile.bundles` 加入 `"@dsh/qq-split"`：
+
+```json
+{
+  "dependencies": {
+    "@dsh/qq-split": "link:/root/.dsh/plugin-src/@dsh/qq-split"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@tencent-connect/dsh-qqbot",
+        "@dsh/heart",
+        "@dsh/qq-split"
+      ]
+    }
+  }
+}
+```
+
+插件本身已包含 bundle patch（`- insert:`），无需在 profile 的 patch 额外手动 insert。如需自定义配置（如间隔时长、触发字数），可在 profile 的 `cordis.patch.yml` 追加覆盖：
 
 ```yaml
-- id: qq-split
-  name: "@dsh/qq-split"
+- id: dsh-qq-split
   config:
-    enabled: true
     minChars: 120
     targetChars: 140
     maxSegments: 3
-    groupMaxSegments: 2
     delayMs: 500
-    protectCode: true
 ```
 
 ---
 
-## 安装与回滚（各 5 行）
+## 快速安装与重启
 
-### 安装
 ```sh
-# 1. 链接或安装插件
-cd /root/.dsh/plugin-src && git clone https://github.com/kirigayakazima/dsh-qq-split
-# 2. 为 qqbot 打入 1 行补丁并修改 cordis.patch.yml（streaming: false + 启用 qq-split）
-# 3. 重启手机端 DSH 进程即可生效
+# 1. 下载或更新插件
+cd /root/.dsh/plugin-src
+git clone https://github.com/kirigayakazima/dsh-qq-split.git @dsh/qq-split 2>/dev/null || (cd @dsh/qq-split && git pull)
+
+# 2. 执行上面的 Node 单行脚本为 qqbot 打入 hook 补丁
+
+# 3. 确保 profile 的 cordis.patch.yml 已设 streaming: false，package.json 已包含 bundles 注册
+
+# 4. 重启手机端 DSH 进程即可生效
 ```
 
-### 回滚
-```sh
-# 1. 修改 cordis.patch.yml：将 im-qqbot 的 streaming 改回 true，移除 qq-split 配置
-# 2. 从 profile 的 bundles 中移除 @dsh/qq-split
-# 3. 重启 DSH 即可完全恢复原生一大段发送（qqbot 补丁不产生任何副作用）
+### 验证加载
+重启 DSH 后观察控制台或日志输出：
+看到 `[qq-split] initialized successfully, sendMarkdown wrapped` 即代表插件成功加载并挂载出口！
+发送长消息时会输出：`[qq-split] splitting outbound message into X segments`。
 ```
 
 ---

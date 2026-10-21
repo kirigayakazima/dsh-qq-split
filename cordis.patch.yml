@@ -1,21 +1,4 @@
-# cordis.patch.yml 示例配置
-# 1. 关掉 QQBot 流式（必须：流式走 StreamingWriter，不会经过 sendMarkdown 出口）
-- id: im-qqbot
-  config:
-    streaming: false
-
-# 2. 加载与配置 QQ 断句插件
-- id: qq-split
-  name: "@dsh/qq-split"
-  config:
-    enabled: true
-    minChars: 120
-    targetChars: 140
-    maxSegments: 3
-    groupMaxSegments: 2
-    delayMs: 500
-    protectCode: true
-    skipPrefixes:
-      - "🔧"
-      - "❌"
-      - "⚠️"
+# @dsh/qq-split bundle patch: 以插件层的形式插入一行
+- insert:
+    - id: dsh-qq-split
+      name: "@dsh/qq-split"
