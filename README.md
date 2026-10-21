@@ -120,10 +120,10 @@ git clone https://github.com/kirigayakazima/dsh-qq-split.git @dsh/qq-split 2>/de
 |---|---|---|---|
 | `enabled` | `boolean` | `true` | 是否启用断句切分 |
 | `minChars` | `number` | `120` | 回复长度小于此字符数时不切分，保持单条 |
-| `targetChars` | `number` | `140` | 每段目标期望长度 |
-| `maxSegments` | `number` | `3` | 私聊最多分几段（QQ 被动回复额度 4 次，留 1 次） |
+| `targetChars` | `number` | `55` | 每段目标期望长度 |
+| `maxSegments` | `number` | `4` | 私聊最多分几段（QQ 被动回复额度 4 次） |
 | `groupMaxSegments` | `number` | `2` | 群聊最多分几段（群聊更克制） |
-| `delayMs` | `number` | `500` | 分段发送间隔延迟（毫秒） |
+| `delayMs` | `number` | `400` | 分段发送间隔延迟（毫秒） |
 | `protectCode` | `boolean` | `true` | 代码块和表格是否作为整体保护 |
 | `skipPrefixes` | `string[]` | `['🔧', '❌', '⚠️']` | 跳过断句的消息前缀 |
 
