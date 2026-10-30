@@ -1,6 +1,6 @@
 {
   "name": "@dsh/qq-split",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "QQ 机器人出站消息断句适配器：在发送前将长文本回复切分为 2–4 条短消息逐条发送，模拟真人打字节奏。",
   "type": "module",
   "main": "lib/index.js",

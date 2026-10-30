@@ -171,3 +171,12 @@ test('插件卸载（dispose）时能完全恢复原生 sendMarkdown', async () 
   ctx.dispose()
   assert.equal(sender.sendMarkdown, origFunc)
 })
+
+test('正式 sender 包装保留技术长句，node 24 与 main 分支不会单独发出', async () => {
+  const sender = createFakeSender()
+  apply(createFakeCtx(sender), { minChars: 1, targetChars: 25, maxSegments: 4, delayMs: 0 })
+  const first = '装完了，全过：node 24、npm 预检过、加载自检过、dsh --dump-config OK。'
+  const second = '装好了，0.19.0（main 分支，tag 还没打），加载自检和 dump-config 都过。'
+  await sender.sendMarkdown({ scope: 'c2c', targetId: 'test' }, first + second)
+  assert.deepEqual(sender.getCalls().map(call => call.content), [first, second])
+})

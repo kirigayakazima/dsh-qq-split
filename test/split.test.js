@@ -114,17 +114,58 @@ test('URL 链接完整保留不被切断', () => {
   assert.ok(urlSeg)
 })
 
-test('长段落无标点文本不崩溃，正常切分', () => {
+test('长段落无句末标点时保持完整，不按空格强拆', () => {
   const text = 'abcdefghij '.repeat(20) // 220 字符连续英文单词无标点
   const result = splitForQQ(text, { minChars: 50, targetChars: 80, maxSegments: 3 })
-  assert.ok(result.length >= 2 && result.length <= 3)
-  for (const part of result) {
-    assert.ok(part.length > 0)
-  }
+  assert.deepEqual(result, [text.trim()])
 })
 
 test('空文本与全空白返回空数组', () => {
   assert.deepEqual(splitForQQ(''), [])
   assert.deepEqual(splitForQQ('   \n\n  '), [])
   assert.deepEqual(splitForQQ(null), [])
+})
+
+test('QQ 实例：node 24、npm 预检保持同句，不按空格拆开发送', () => {
+  const text = '装完了，全过：node 24、npm 预检过、加载自检过、dsh --dump-config OK，现在 mnemon_status 是健康的，heart-main 空着。' +
+    '一处跟她说的不一样：压缩包顶层没有 mnemon-install/ 目录，解开是散在 /root 的，我收进 /root/mnemon-install/ 再跑的。' +
+    '要紧的是：现在两套记忆并存（heart 和 Mnemon），怎么分工得定，不然我记东西会分裂——这个等她定。'
+  const firstSentence = text.slice(0, text.indexOf('。') + 1)
+  for (const targetChars of [12, 30, 55]) {
+    const parts = splitForQQ(text, { minChars: 120, targetChars, maxSegments: 4 })
+    assert.ok(parts.some(part => part.includes(firstSentence)))
+    assert.equal(parts.join(''), text)
+  }
+})
+
+test('QQ 实例：main 分支、tag 还没打不被按空格拆成三条', () => {
+  const text = '装好了，0.19.0（main 分支，tag 还没打），加载自检和 dump-config 都过。' +
+    '源码和 heart 数据我都备份在 /root/.dsh/backups/heart-upgrade-20261030-235005/。' +
+    '现在重启，会断一会儿。新版默认还是 legacy 模式，不动旧记忆，可以放心。'
+  for (const targetChars of [12, 30, 55]) {
+    const parts = splitForQQ(text, { minChars: 120, targetChars, maxSegments: 4 })
+    assert.ok(parts.some(part => part.includes('0.19.0（main 分支，tag 还没打）')))
+    assert.equal(parts.join(''), text)
+  }
+})
+
+test('长句内部的单换行不是发送边界，句末之后仍可分段', () => {
+  const first = '今天这个问题我想了很久，决定先把当前版本保存下来，\n然后再继续研究断句机制，因为我们更希望她能够完整地说完一句话，而不是在中间突然停住。'
+  const second = '接下来我会先检查配置和发送链路。'
+  assert.deepEqual(splitForQQ(first + second, { minChars: 1, targetChars: 30 }), [first, second])
+})
+
+test('英文长句及分号子句保持完整，下一完整句子可以另发', () => {
+  const first = 'I want this complete sentence to remain in one message; splitting it at arbitrary spaces makes technical instructions harder to follow.'
+  const second = 'Please check the result.'
+  assert.deepEqual(splitForQQ(first + ' ' + second, { minChars: 1, targetChars: 40 }), [first, second])
+})
+
+test('空行仍可作为段落边界，受段数限制时完整保留正文', () => {
+  const paragraphs = ['第一段没有句号也应保持完整', '第二段也没有句号但是独立一段', '第三段继续说明情况', '第四段最后补充一句']
+  const text = paragraphs.join('\n \n')
+  const parts = splitForQQ(text, { minChars: 1, targetChars: 10, maxSegments: 2 })
+  assert.equal(parts.length, 2)
+  for (const paragraph of paragraphs) assert.ok(parts.some(part => part.includes(paragraph)))
+  assert.equal(parts.join('').replace(/\s/g, ''), text.replace(/\s/g, ''))
 })
