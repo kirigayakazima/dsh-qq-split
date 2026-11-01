@@ -1,3 +1,10 @@
+> [!IMPORTANT]
+> **此仓库已正式合并入统一伴侣主仓 [LucidHeart](https://github.com/kirigayakazima/LucidHeart)。**  
+> 
+> 本仓库现已进入只读归档状态。本仓库为历史早期实现，已被 [`@dsh/qq-plus`](https://github.com/kirigayakazima/LucidHeart/tree/main/packages/qq-plus) 彻底替代。
+
+---
+
 # @dsh/qq-split
 
 DSH（DeepSeek Harness）的 QQ 机器人消息断句出口适配器。
